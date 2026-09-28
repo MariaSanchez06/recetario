@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RECETARIO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #FFFBF3;
+    --panel: #FFFFFF;
+    --ink: #2B2140;
+    --muted: rgba(43,33,64,0.6);
+    --pink: #FF5D8F;
+    --yellow: #FFC145;
+    --mint: #2FCB9E;
+    --blue: #3E9DFF;
+    --accent: #1FA463;
+    --accent-soft: #E4F7ED;
+    --hairline: rgba(43,33,64,0.09);
+    --shadow-sm: 0 2px 8px rgba(43,33,64,0.06);
+    --shadow-md: 0 10px 26px rgba(43,33,64,0.14);
+    --shadow-lg: 0 16px 36px rgba(43,33,64,0.16);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: 20px; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1B1530; --panel: #26203D; --ink: #F4EEFF; --muted: rgba(244,238,255,0.6);
+      --accent: #3FCB86; --accent-soft: #1E3A2B; --hairline: rgba(244,238,255,0.09);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
+      --shadow-md: 0 10px 26px rgba(0,0,0,0.4);
+      --shadow-lg: 0 16px 36px rgba(0,0,0,0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1B1530; --panel: #26203D; --ink: #F4EEFF; --muted: rgba(244,238,255,0.6);
+    --accent: #3FCB86; --accent-soft: #1E3A2B; --hairline: rgba(244,238,255,0.09);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
+    --shadow-md: 0 10px 26px rgba(0,0,0,0.4);
+    --shadow-lg: 0 16px 36px rgba(0,0,0,0.45);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Nunito', sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: 'Baloo 2', sans-serif; }
+
+  header { padding: 3rem 1.5rem 1.2rem; text-align: center; }
+  header h1 {
+    font-size: clamp(2.1rem, 6vw, 2.8rem);
+    font-weight: 800;
+    margin: 0 0 .35rem;
+    color: var(--ink);
+    letter-spacing: .02em;
+  }
+  header p { margin: 0; font-size: 1.3rem; letter-spacing: .15em; }
+
+  .tabbar {
+    display: flex; justify-content: center; gap: .3rem;
+    padding: 0 1.2rem 2rem; max-width: 320px; margin: 0 auto;
+  }
+  .tab-btn {
+    flex: 1; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: .9rem;
+    border: none; background: transparent; color: var(--muted);
+    padding: .6rem 1rem; border-radius: 999px; cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+  }
+  .tab-btn.active { background: var(--accent); color: white; box-shadow: var(--shadow-sm); }
+  .tabbar-track { display: flex; gap: .3rem; background: var(--panel); border-radius: 999px; padding: .3rem; box-shadow: var(--shadow-sm); width: 100%; }
+
+  main { max-width: 960px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; animation: fadein .25s ease; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* --- panel de inicio --- */
+  .hero {
+    position: relative; overflow: hidden;
+    border-radius: 24px; padding: 2.4rem 1.8rem;
+    color: white; box-shadow: var(--shadow-lg);
+    margin-bottom: 2rem;
+  }
+  .hero::before {
+    content: ""; position: absolute; right: -40px; bottom: -60px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(255,255,255,0.14);
+  }
+  .hero::after {
+    content: ""; position: absolute; right: 60px; top: -40px;
+    width: 90px; height: 90px; border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+  }
+  .hero .eyebrow {
+    font-weight: 800; font-size: .76rem; letter-spacing: .08em;
+    opacity: .85; margin-bottom: .7rem; position: relative;
+  }
+  .hero .hero-emoji {
+    font-size: 3rem; display: inline-flex; align-items: center; justify-content: center;
+    width: 4.2rem; height: 4.2rem; border-radius: 50%; background: rgba(255,255,255,0.2);
+    margin-bottom: .9rem; position: relative;
+  }
+  .hero h2 { margin: 0 0 .4rem; font-size: clamp(1.6rem, 5vw, 2.15rem); position: relative; }
+  .hero .hero-meta { font-weight: 700; font-size: .9rem; opacity: .92; margin-bottom: 1.4rem; position: relative; }
+  .hero .hero-meta span:not(:last-child)::after { content: "  •  "; }
+  .hero button {
+    position: relative; background: white; border: none; color: var(--ink);
+    font-weight: 800; font-size: .9rem; padding: .65rem 1.4rem; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform .15s ease;
+  }
+  .hero button:hover { transform: translateY(-1px); }
+
+  .quick-row { display: flex; gap: 1rem; overflow-x: auto; padding: .3rem .1rem 2rem; scroll-snap-type: x proximity; }
+  .quick-chip {
+    flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    background: none; border: none; cursor: pointer; font-family: 'Nunito', sans-serif; color: var(--ink);
+    width: 76px; scroll-snap-align: start; transition: transform .15s ease;
+  }
+  .quick-chip:hover { transform: translateY(-2px); }
+  .quick-chip .bubble {
+    width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem; box-shadow: var(--shadow-md);
+  }
+  .quick-chip .bubble-name { font-size: .76rem; font-weight: 700; text-align: center; line-height: 1.2; color: var(--muted); }
+
+  .mini-stats {
+    display: flex; flex-wrap: wrap; gap: .5rem 2rem;
+    padding: 1.1rem 1.3rem; border-radius: 16px;
+    background: var(--panel); box-shadow: var(--shadow-sm);
+  }
+  .mini-stats .mini { font-size: .88rem; font-weight: 700; color: var(--muted); }
+  .mini-stats .mini b { color: var(--accent); font-weight: 800; }
+
+  .section-label {
+    font-weight: 800; font-size: .78rem; color: var(--muted);
+    letter-spacing: .06em; margin: 2.6rem 0 1rem;
+  }
+
+  /* --- lista de postres --- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.2rem; }
+  .card {
+    display: block; text-align: left; width: 100%;
+    color: white; border: none; border-radius: 18px;
+    padding: 1.4rem 1.3rem; box-shadow: var(--shadow-md); cursor: pointer;
+    font-family: 'Nunito', sans-serif; transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  .card:nth-child(4n+1) { background: var(--pink); }
+  .card:nth-child(4n+2) { background: var(--blue); }
+  .card:nth-child(4n+3) { background: var(--mint); }
+  .card:nth-child(4n+4) { background: var(--yellow); color: var(--ink); }
+  .card .emoji { font-size: 1.9rem; display: block; margin-bottom: .6rem; }
+  .card h3 { margin: 0 0 .25rem; font-size: 1.15rem; font-weight: 700; }
+  .card .meta { font-size: .84rem; font-weight: 700; opacity: .9; }
+
+  /* --- detalle de receta --- */
+  .back-btn {
+    background: none; border: none; color: var(--accent); font-weight: 800;
+    font-size: .92rem; cursor: pointer; padding: 0; margin-bottom: 1.8rem;
+    display: inline-flex; align-items: center; gap: .3rem;
+  }
+  .recipe-head .tag {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2.6rem; height: 2.6rem; font-size: 1.3rem;
+    border-radius: 50%; color: white; margin-bottom: .9rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .recipe-head h2 { margin: 0 0 .4rem; font-size: clamp(1.7rem, 4.5vw, 2.2rem); }
+  .recipe-head .meta { font-weight: 700; font-size: .9rem; color: var(--muted); }
+  .recipe-head .meta span:not(:last-child)::after { content: "  •  "; }
+  .recipe-body {
+    display: grid; grid-template-columns: 1fr 1.6fr; gap: 2.4rem;
+    margin-top: 1.8rem; background: var(--panel); border-radius: 18px;
+    padding: 1.8rem; box-shadow: var(--shadow-sm);
+  }
+  @media (max-width: 620px) { .recipe-body { grid-template-columns: 1fr; padding: 1.4rem; } }
+  .recipe-body h4 { margin: 0 0 .8rem; font-size: .8rem; font-weight: 800; color: var(--muted); letter-spacing: .05em; }
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; padding: 0; margin: 0; list-style: none; }
+  .chips li { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: .4rem .9rem; font-size: .88rem; font-weight: 700; }
+  .steps { padding: 0; margin: 0; list-style: none; counter-reset: step; }
+  .steps li { counter-increment: step; position: relative; padding-left: 2.3rem; margin-bottom: 1.1rem; }
+  .steps li:last-child { margin-bottom: 0; }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 0; top: 0;
+    width: 1.6rem; height: 1.6rem; border-radius: 50%;
+    background: var(--accent); color: white; font-weight: 800; font-size: .82rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .delete-detail-btn {
+    background: var(--panel); border: 2px solid var(--hairline); color: var(--ink);
+    font-weight: 800; font-size: .85rem; padding: .6rem 1.2rem; border-radius: 999px;
+    cursor: pointer; margin-top: 1.8rem; transition: border-color .15s ease, color .15s ease;
+  }
+  .delete-detail-btn:hover { border-color: var(--pink); color: var(--pink); }
+
+  /* --- formularios --- */
+  form.add-form {
+    background: var(--panel); border: none;
+    border-radius: 18px; padding: 1.6rem; margin-top: 1rem;
+    display: grid; gap: 1rem; box-shadow: var(--shadow-sm);
+  }
+  .field { display: grid; gap: .4rem; }
+  .field label { font-size: .82rem; font-weight: 800; color: var(--muted); letter-spacing: .02em; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .9rem; }
+  @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+  input, select, textarea {
+    font-family: 'Nunito', sans-serif; font-size: .95rem; color: var(--ink);
+    background: var(--bg); border: 2px solid transparent; border-radius: 10px;
+    padding: .65rem .8rem; width: 100%; transition: border-color .15s ease;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
+  textarea { min-height: 5rem; resize: vertical; }
+  .hint { font-size: .78rem; color: var(--muted); }
+  button.submit {
+    justify-self: start; background: var(--accent); color: white; border: none;
+    font-weight: 800; font-size: .92rem; padding: .7rem 1.6rem; border-radius: 999px; cursor: pointer;
+    box-shadow: var(--shadow-sm); transition: transform .15s ease;
+  }
+  button.submit:hover { transform: translateY(-1px); }
+
+  footer { text-align: center; padding: 1.5rem 1.5rem 3rem; font-size: .82rem; color: var(--muted); font-weight: 600; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(27,21,48,0.5);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem; z-index: 50; backdrop-filter: blur(2px);
+  }
+  .modal-box {
+    background: var(--panel); border-radius: 18px; padding: 1.8rem;
+    max-width: 380px; width: 100%; box-shadow: var(--shadow-lg);
+  }
+  .modal-box h3 { margin: 0 0 .7rem; font-size: 1.2rem; }
+  .modal-box p { margin: 0; font-size: .93rem; color: var(--muted); line-height: 1.5; }
+  .modal-box p strong { color: var(--ink); }
+  .modal-actions { display: flex; gap: .7rem; justify-content: flex-end; margin-top: 1.4rem; }
+  .modal-confirm-btn {
+    background: var(--pink); color: white; border: none;
+    font-weight: 800; font-size: .85rem; padding: .6rem 1.3rem; border-radius: 999px; cursor: pointer;
+  }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .card, .quick-chip, .tab-panel.active { transition: none; animation: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RECETARIO</h1>
+  <p>🍮🍋🍫</p>
+</header>
+
+<nav class="tabbar" aria-label="Secciones">
+  <button class="tab-btn active" data-tab="inicio" onclick="showTab('inicio')">Inicio</button>
+  <button class="tab-btn" data-tab="postres" onclick="showTab('postres')">Postres</button>
+</nav>
+
+<main>
+
+  <section class="tab-panel active" id="inicio">
+    <div id="hero-slot"></div>
+    <p class="section-label">ACCESO RÁPIDO</p>
+    <div class="quick-row" id="quick-row"></div>
+    <div class="mini-stats" id="mini-stats"></div>
+  </section>
+
+  <section class="tab-panel" id="postres">
+    <div id="postres-list">
+      <div class="grid" id="recipe-grid"></div>
+
+      <p id="readonly-note" class="hint" style="display:none; margin: 2rem 0 0;">👀 Este recetario no está disponible para guardar cambios ahora mismo — inténtalo de nuevo en un momento.</p>
+
+      <div id="add-form-wrap">
+        <p class="section-label">AÑADIR UNA RECETA NUEVA</p>
+        <form class="add-form" id="add-form">
+          <div class="field">
+            <label for="f-nombre">Nombre</label>
+            <input id="f-nombre" required placeholder="Ej: Flan de vainilla">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="f-emoji">Emoji</label>
+              <input id="f-emoji" placeholder="🍮" maxlength="2">
+            </div>
+            <div class="field">
+              <label for="f-tiempo">Tiempo (min)</label>
+              <input id="f-tiempo" type="number" min="1" required placeholder="30">
+            </div>
+            <div class="field">
+              <label for="f-dificultad">Dificultad</label>
+              <select id="f-dificultad">
+                <option>muy fácil</option>
+                <option selected>fácil</option>
+                <option>media</option>
+                <option>difícil</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-ingredientes">Ingredientes (uno por línea)</label>
+            <textarea id="f-ingredientes" placeholder="200 g azúcar
+3 huevos"></textarea>
+          </div>
+          <div class="field">
+            <label for="f-pasos">Elaboración (un paso por línea)</label>
+            <textarea id="f-pasos" placeholder="Precalienta el horno...
+Mezcla los ingredientes..."></textarea>
+          </div>
+          <button type="submit" class="submit">Guardar receta</button>
+          <p id="add-error" class="hint" style="display:none; color: var(--pink); font-weight:700;">No se ha podido guardar — revisa tu conexión e inténtalo de nuevo.</p>
+          <p class="hint">Se guarda en este recetario compartido: cualquiera con el enlace lo verá y podrá editarlo.</p>
+        </form>
+      </div>
+    </div>
+
+    <div id="postres-detail" style="display:none">
+      <button class="back-btn" onclick="backToList()">← Volver a postres</button>
+
+      <div id="detail-view">
+        <div class="recipe-head">
+          <span class="tag" id="d-tag">Postre</span>
+          <h2 id="d-nombre"></h2>
+          <div class="meta"><span id="d-tiempo"></span><span id="d-dificultad"></span></div>
+        </div>
+        <div class="recipe-body">
+          <div>
+            <h4>Ingredientes</h4>
+            <ul class="chips" id="d-ingredientes"></ul>
+          </div>
+          <div>
+            <h4>Elaboración</h4>
+            <ol class="steps" id="d-pasos"></ol>
+          </div>
+        </div>
+        <div id="detail-actions" style="display:flex; gap:.6rem; flex-wrap:wrap;">
+          <button class="delete-detail-btn" onclick="startEdit()">Editar receta</button>
+          <button class="delete-detail-btn" onclick="deleteRecipe(currentDetailId)">Eliminar receta</button>
+        </div>
+      </div>
+
+      <form class="add-form" id="edit-form" style="display:none">
+        <div class="field">
+          <label for="e-nombre">Nombre</label>
+          <input id="e-nombre" required>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="e-emoji">Emoji</label>
+            <input id="e-emoji" maxlength="2">
+          </div>
+          <div class="field">
+            <label for="e-tiempo">Tiempo (min)</label>
+            <input id="e-tiempo" type="number" min="1" required>
+          </div>
+          <div class="field">
+            <label for="e-dificultad">Dificultad</label>
+            <select id="e-dificultad">
+              <option>muy fácil</option>
+              <option>fácil</option>
+              <option>media</option>
+              <option>difícil</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="e-ingredientes">Ingredientes (uno por línea)</label>
+          <textarea id="e-ingredientes"></textarea>
+        </div>
+        <div class="field">
+          <label for="e-pasos">Elaboración (un paso por línea)</label>
+          <textarea id="e-pasos"></textarea>
+        </div>
+        <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
+          <button type="submit" class="submit">Guardar cambios</button>
+          <button type="button" class="delete-detail-btn" onclick="cancelEdit()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer>Recetario compartido · los cambios se guardan en la nube y se sincronizan entre todos los que tengan el enlace</footer>
+
+<div id="delete-modal" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <h3>Eliminar receta</h3>
+    <p>¿Estás seguro de que quieres eliminar <strong id="modal-recipe-name"></strong>?</p>
+    <div class="modal-actions">
+      <button type="button" class="delete-detail-btn" onclick="closeDeleteModal()">No</button>
+      <button type="button" class="modal-confirm-btn" onclick="confirmDeleteModal()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var seedRecipes = [
+    { id: 'seed-tarta-queso', nombre: "Tarta de queso", emoji: "🍰", tiempo: 50, dificultad: "fácil",
+      ingredientes: ["500 g queso crema","200 g azúcar","3 huevos","200 ml nata","1 cda harina"],
+      pasos: ["Precalienta el horno a 200°C y forra un molde con papel de horno.","Bate el queso con el azúcar hasta que quede fino.","Añade los huevos uno a uno, luego la nata y la harina.","Vierte en el molde y hornea 45-50 min, hasta que se dore por arriba.","Deja enfriar dentro del horno con la puerta entreabierta antes de desmoldar."] },
+    { id: 'seed-brownies', nombre: "Brownies de chocolate", emoji: "🍫", tiempo: 40, dificultad: "fácil",
+      ingredientes: ["200 g chocolate negro","150 g mantequilla","200 g azúcar","3 huevos","100 g harina","Nueces al gusto"],
+      pasos: ["Funde el chocolate con la mantequilla al baño maría.","Mezcla con el azúcar y los huevos batidos.","Incorpora la harina tamizada y las nueces.","Hornea a 180°C durante 25-30 min en molde cuadrado.","El centro debe quedar húmedo: no te pases de horno."] },
+    { id: 'seed-natillas', nombre: "Natillas caseras", emoji: "🍮", tiempo: 25, dificultad: "muy fácil",
+      ingredientes: ["1 l leche","4 yemas de huevo","100 g azúcar","1 cda maicena","Canela y piel de limón"],
+      pasos: ["Infusiona la leche con la canela y la piel de limón.","Bate las yemas con el azúcar y la maicena.","Añade un poco de leche caliente a las yemas, mezcla y vuelca todo a la olla.","Cuece a fuego bajo sin dejar de remover hasta que espese.","Reparte en cuencos y deja enfriar antes de servir."] },
+    { id: 'seed-bizcocho-limon', nombre: "Bizcocho de limón", emoji: "🍋", tiempo: 55, dificultad: "fácil",
+      ingredientes: ["3 huevos","200 g azúcar","200 ml aceite de girasol","250 g harina","1 sobre levadura","Ralladura y zumo de 1 limón"],
+      pasos: ["Bate los huevos con el azúcar hasta que blanqueen.","Añade el aceite, el zumo y la ralladura de limón.","Incorpora la harina tamizada con la levadura, con movimientos suaves.","Vierte en molde engrasado y hornea a 180°C unos 45 min.","Comprueba con un palillo antes de sacarlo del horno."] }
+  ];
+
+  var SUPABASE_URL = 'https://ilpuyyjmiqceimkrgnkz.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlscHV5eWptaXFjZWlta3Jnbmt6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MjY0MTQsImV4cCI6MjEwNjAwMjQxNH0.PgkhYyDJzR1E2KHaFvPqYzVUotIclMuThPZjbfY9sd8';
+  var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var recipes = [];
+  var currentDetailId = null;
+  var tagColors = ['#FF5D8F', '#3E9DFF', '#2FCB9E', '#FFC145'];
+  var canWrite = true;
+  var POLL_MS = 6000;
+
+  function findRecipe(id) {
+    for (var i = 0; i < recipes.length; i++) if (recipes[i].id === id) return recipes[i];
+    return null;
+  }
+
+  function applyWritePermission() {
+    var addWrap = document.getElementById('add-form-wrap');
+    var readonlyNote = document.getElementById('readonly-note');
+    if (addWrap) addWrap.style.display = canWrite ? 'block' : 'none';
+    if (readonlyNote) readonlyNote.style.display = canWrite ? 'none' : 'block';
+    var detailActions = document.getElementById('detail-actions');
+    if (detailActions) detailActions.style.display = canWrite ? 'flex' : 'none';
+  }
+
+  function mapRow(row) {
+    return {
+      id: row.id,
+      nombre: row.nombre || 'Postre',
+      emoji: row.emoji || '🍽️',
+      tiempo: row.tiempo || 0,
+      dificultad: row.dificultad || 'fácil',
+      ingredientes: row.ingredientes || [],
+      pasos: row.pasos || []
+    };
+  }
+
+  async function fetchRecipes() {
+    var res = await supabase.from('recipes').select('*').order('created_at', { ascending: true });
+    if (res.error) throw res.error;
+    return (res.data || []).map(mapRow);
+  }
+
+  async function seedInitialRecipes() {
+    for (var i = 0; i < seedRecipes.length; i++) {
+      var r = seedRecipes[i];
+      await supabase.from('recipes').insert({
+        nombre: r.nombre, emoji: r.emoji, tiempo: r.tiempo, dificultad: r.dificultad,
+        ingredientes: r.ingredientes, pasos: r.pasos
+      });
+    }
+  }
+
+  async function refreshAndRender() {
+    try {
+      recipes = await fetchRecipes();
+      applyWritePermission();
+
+      if (!recipes.length) {
+        await seedInitialRecipes();
+        recipes = await fetchRecipes();
+      }
+
+      renderGrid();
+      renderInicio();
+
+      if (currentDetailId) {
+        if (findRecipe(currentDetailId)) {
+          showDetail(currentDetailId, true);
+        } else {
+          backToList();
+        }
+      }
+    } catch (err) {
+      console.error('Error al leer el recetario:', err);
+      canWrite = false;
+      applyWritePermission();
+    }
+  }
+
+  async function initDb() {
+    await refreshAndRender();
+    setInterval(refreshAndRender, POLL_MS);
+  }
+
+  function renderGrid() {
+    var grid = document.getElementById('recipe-grid');
+    grid.innerHTML = '';
+    recipes.forEach(function (r) {
+      var btn = document.createElement('button');
+      btn.className = 'card';
+      btn.onclick = function () { showDetail(r.id); };
+      btn.innerHTML =
+        '<span class="emoji">' + (r.emoji || '🍽️') + '</span>' +
+        '<h3>' + r.nombre + '</h3>' +
+        '<div class="meta">' + r.tiempo + ' min · ' + r.dificultad + '</div>';
+      grid.appendChild(btn);
+    });
+  }
+
+  var heroColors = ['#FF5D8F', '#3E9DFF', '#2FCB9E'];
+
+  function renderInicio() {
+    var total = recipes.length;
+    var heroSlot = document.getElementById('hero-slot');
+    var quickRow = document.getElementById('quick-row');
+    var miniStats = document.getElementById('mini-stats');
+
+    if (!total) {
+      heroSlot.innerHTML = '';
+      quickRow.innerHTML = '';
+      miniStats.innerHTML = '<div class="mini">Todavía no hay recetas — añade la primera en la pestaña <b>Postres</b>.</div>';
+      return;
+    }
+
+    var destacada = recipes[total - 1];
+    var destacadaIndex = total - 1;
+    var heroColor = heroColors[destacadaIndex % heroColors.length];
+    heroSlot.innerHTML =
+      '<div class="hero" style="background:' + heroColor + '">' +
+        '<div class="eyebrow">RECETA DEL MOMENTO</div>' +
+        '<span class="hero-emoji">' + (destacada.emoji || '🍽️') + '</span>' +
+        '<h2>' + destacada.nombre + '</h2>' +
+        '<div class="hero-meta"><span>' + destacada.tiempo + ' min</span><span>' + destacada.dificultad + '</span></div>' +
+        '<button onclick="showTab(\'postres\'); showDetail(\'' + destacada.id + '\')">Ver receta</button>' +
+      '</div>';
+
+    quickRow.innerHTML = '';
+    recipes.forEach(function (r, i) {
+      var btn = document.createElement('button');
+      btn.className = 'quick-chip';
+      btn.onclick = function () { showTab('postres'); showDetail(r.id); };
+      btn.innerHTML =
+        '<span class="bubble" style="background:' + heroColors[i % heroColors.length] + '">' + (r.emoji || '🍽️') + '</span>' +
+        '<span class="bubble-name">' + r.nombre + '</span>';
+      quickRow.appendChild(btn);
+    });
+
+    var avg = Math.round(recipes.reduce(function (s, r) { return s + Number(r.tiempo || 0); }, 0) / total);
+    var facil = recipes.filter(function (r) { return r.dificultad === 'fácil' || r.dificultad === 'muy fácil'; }).length;
+    miniStats.innerHTML =
+      '<div class="mini"><b>' + total + '</b> recetas guardadas</div>' +
+      '<div class="mini"><b>' + avg + ' min</b> de media</div>' +
+      '<div class="mini"><b>' + facil + '</b> fáciles o muy fáciles</div>';
+  }
+
+  function showDetail(id, silent) {
+    var r = findRecipe(id);
+    if (!r) return;
+    var index = recipes.indexOf(r);
+    currentDetailId = id;
+    document.getElementById('d-nombre').textContent = r.nombre;
+    var tagEl = document.getElementById('d-tag');
+    tagEl.textContent = r.emoji || '🍽️';
+    tagEl.style.background = tagColors[index % 4];
+    tagEl.style.color = index % 4 === 3 ? '#2B2140' : '#fff';
+    document.getElementById('d-tiempo').textContent = r.tiempo + ' min';
+    document.getElementById('d-dificultad').textContent = r.dificultad;
+    var ing = document.getElementById('d-ingredientes');
+    ing.innerHTML = '';
+    r.ingredientes.forEach(function (item) {
+      var li = document.createElement('li');
+      li.textContent = item;
+      ing.appendChild(li);
+    });
+    var pasos = document.getElementById('d-pasos');
+    pasos.innerHTML = '';
+    r.pasos.forEach(function (item) {
+      var li = document.createElement('li');
+      li.textContent = item;
+      pasos.appendChild(li);
+    });
+    if (silent) return;
+    document.getElementById('postres-list').style.display = 'none';
+    document.getElementById('postres-detail').style.display = 'block';
+    document.getElementById('detail-view').style.display = 'block';
+    document.getElementById('edit-form').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function backToList() {
+    document.getElementById('postres-detail').style.display = 'none';
+    document.getElementById('postres-list').style.display = 'block';
+  }
+
+  function startEdit() {
+    var r = findRecipe(currentDetailId);
+    if (!r) return;
+    document.getElementById('e-nombre').value = r.nombre;
+    document.getElementById('e-emoji').value = r.emoji || '';
+    document.getElementById('e-tiempo').value = r.tiempo;
+    document.getElementById('e-dificultad').value = r.dificultad;
+    document.getElementById('e-ingredientes').value = r.ingredientes.join('\n');
+    document.getElementById('e-pasos').value = r.pasos.join('\n');
+    document.getElementById('detail-view').style.display = 'none';
+    document.getElementById('edit-form').style.display = 'grid';
+  }
+
+  function cancelEdit() {
+    document.getElementById('edit-form').style.display = 'none';
+    document.getElementById('detail-view').style.display = 'block';
+  }
+
+  document.getElementById('edit-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var r = findRecipe(currentDetailId);
+    if (!r) return;
+    var updated = {
+      nombre: document.getElementById('e-nombre').value.trim() || r.nombre,
+      emoji: document.getElementById('e-emoji').value.trim() || r.emoji,
+      tiempo: Number(document.getElementById('e-tiempo').value) || r.tiempo,
+      dificultad: document.getElementById('e-dificultad').value,
+      ingredientes: document.getElementById('e-ingredientes').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean),
+      pasos: document.getElementById('e-pasos').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean)
+    };
+    var res = await supabase.from('recipes').update(updated).eq('id', r.id);
+    if (res.error) {
+      console.error(res.error);
+      return;
+    }
+    cancelEdit();
+    refreshAndRender();
+  });
+
+  function deleteRecipe(id) {
+    var r = findRecipe(id);
+    if (!r) return;
+    openDeleteModal(r);
+  }
+
+  function openDeleteModal(r) {
+    document.getElementById('modal-recipe-name').textContent = r.nombre;
+    document.getElementById('delete-modal').dataset.recipeId = r.id;
+    document.getElementById('delete-modal').style.display = 'flex';
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('delete-modal').style.display = 'none';
+  }
+
+  async function confirmDeleteModal() {
+    var modal = document.getElementById('delete-modal');
+    var id = modal.dataset.recipeId;
+    var r = findRecipe(id);
+    closeDeleteModal();
+    if (!r) return;
+    var res = await supabase.from('recipes').delete().eq('id', id);
+    if (res.error) { console.error(res.error); return; }
+    if (currentDetailId === id) backToList();
+    refreshAndRender();
+  }
+
+  function showTab(id) {
+    document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+    document.querySelector('.tab-btn[data-tab="' + id + '"]').classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  document.getElementById('add-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var nombre = document.getElementById('f-nombre').value.trim();
+    var emoji = document.getElementById('f-emoji').value.trim();
+    var tiempo = document.getElementById('f-tiempo').value;
+    var dificultad = document.getElementById('f-dificultad').value;
+    var ingredientes = document.getElementById('f-ingredientes').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    var pasos = document.getElementById('f-pasos').value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!nombre || !tiempo) return;
+    var form = e.target;
+    var errorMsg = document.getElementById('add-error');
+    errorMsg.style.display = 'none';
+    var res = await supabase.from('recipes').insert({
+      nombre: nombre, emoji: emoji || '🍽️', tiempo: Number(tiempo), dificultad: dificultad,
+      ingredientes: ingredientes, pasos: pasos
+    });
+    if (res.error) {
+      console.error(res.error);
+      errorMsg.style.display = 'block';
+      return;
+    }
+    form.reset();
+    refreshAndRender();
+  });
+
+  initDb();
+</script>
+
+</body>
+</html>
