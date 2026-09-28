@@ -460,7 +460,20 @@ Mezcla los ingredientes..."></textarea>
     return (res.data || []).map(mapRow);
   }
 
-  async function seedInitialRecipes() {
+  async function hasSeededBefore() {
+    var res = await supabase.from('app_meta').select('value').eq('key', 'seeded').maybeSingle();
+    if (res.error) return true; // si no existe la tabla app_meta, no forzamos siembra
+    return !!(res.data && res.data.value);
+  }
+
+  async function markSeeded() {
+    await supabase.from('app_meta').upsert({ key: 'seeded', value: true });
+  }
+
+  async function seedInitialRecipesOnce() {
+    var already = await hasSeededBefore();
+    if (already) return;
+    await markSeeded(); // marcamos primero para que nadie más intente sembrar a la vez
     for (var i = 0; i < seedRecipes.length; i++) {
       var r = seedRecipes[i];
       await supabase.from('recipes').insert({
@@ -470,26 +483,24 @@ Mezcla los ingredientes..."></textarea>
     }
   }
 
+  function applyFetchedRecipes(list) {
+    recipes = list;
+    renderGrid();
+    renderInicio();
+    if (currentDetailId) {
+      if (findRecipe(currentDetailId)) {
+        showDetail(currentDetailId, true);
+      } else {
+        backToList();
+      }
+    }
+  }
+
   async function refreshAndRender() {
     try {
-      recipes = await fetchRecipes();
+      var list = await fetchRecipes();
       applyWritePermission();
-
-      if (!recipes.length) {
-        await seedInitialRecipes();
-        recipes = await fetchRecipes();
-      }
-
-      renderGrid();
-      renderInicio();
-
-      if (currentDetailId) {
-        if (findRecipe(currentDetailId)) {
-          showDetail(currentDetailId, true);
-        } else {
-          backToList();
-        }
-      }
+      applyFetchedRecipes(list);
     } catch (err) {
       console.error('Error al leer el recetario:', err);
       canWrite = false;
@@ -498,6 +509,11 @@ Mezcla los ingredientes..."></textarea>
   }
 
   async function initDb() {
+    try {
+      await seedInitialRecipesOnce();
+    } catch (err) {
+      console.error('Error al sembrar recetas iniciales:', err);
+    }
     await refreshAndRender();
     setInterval(refreshAndRender, POLL_MS);
   }
